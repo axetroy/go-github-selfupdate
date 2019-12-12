@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
+	"github.com/cheggaaa/pb/v3"
 	"github.com/inconshreveable/go-update"
 )
 
@@ -49,7 +50,17 @@ func (up *Updater) downloadDirectlyFromURL(assetURL string) (io.ReadCloser, erro
 		return nil, fmt.Errorf("Failed to download a release file from %s: Not successful status %d", assetURL, res.StatusCode)
 	}
 
-	return res.Body, nil
+	tmpl := fmt.Sprintf(`{{string . "prefix"}}{{ "%s" }} {{counters . }} {{ bar . "[" "=" ">" "-" "]"}} {{percent . }} {{speed . }}{{string . "suffix"}}`, "dvm.tar.gz")
+
+	bar := pb.ProgressBarTemplate(tmpl).Start64(res.ContentLength)
+
+	bar.SetWriter(os.Stdout)
+
+	barReader := bar.NewProxyReader(res.Body)
+
+	bar.Finish()
+
+	return barReader, nil
 }
 
 // UpdateTo downloads an executable from GitHub Releases API and replace current binary with the downloaded one.
